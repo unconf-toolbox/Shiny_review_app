@@ -7,17 +7,22 @@ library(rdrop2)
 # token <- readRDS("my-token.rds")
 
 ## Load data from dropbox
-filenames <- drop_dir('responses/')$name
-user_data <- list()
-for (i in 1:length(filenames)){
-  user_data[[i]] <- drop_read_csv(paste0('responses/',filenames[i]))
-}
-all_files <- do.call(rbind, user_data)
 
-last_rating <- all_files[nrow(all_files),]
+# drop_download('responses/', overwrite = TRUE)
+# filenames <- drop_dir('responses/')$name
+# user_data <- list()
+# for (i in 1:length(filenames)){
+#   user_data[[i]] <- drop_read_csv(paste0('responses/',filenames[i]))
+# }
+# all_files <- do.call(rbind, user_data)
+# 
+# last_rating <- all_files[nrow(all_files),]
+
+last_rating <- read.table("trial.txt", sep = "|", header = T,quote="", stringsAsFactors = TRUE)
 
 
-
+trial2 <- last_rating$relevant
+gsub("\\", "",last_rating$relevant,fixed=TRUE)
 
 ## Recode data
 last_rating$twitter10 <- ifelse(last_rating$twitter10=="Yes","Twitter","")
@@ -25,47 +30,49 @@ last_rating$github10 <- ifelse(last_rating$github10=="Yes","Github","")
 last_rating$blog10 <- ifelse(last_rating$blog10=="Yes","Blog","")
 last_rating$linkedin10 <- ifelse(last_rating$linkedin10=="Yes","Linkedin","")
 last_rating$other10 <- ifelse(last_rating$other10=="Yes","Other","")
+last_rating$diversity <- ifelse(last_rating$diversity=="I consider myself a part of one of these groups","Yes","No")
 
 all_social <- c(last_rating$twitter10, last_rating$github10,last_rating$blog10,last_rating$linkedin10,last_rating$other10)
 
 remove_names <- last_rating[-(1:3)]
 
-# outputDir <- "responses/ratings2"
 outputDir <- "ratings2/"
 
-
 # fields <- c(last_rating$name1, last_rating$name2, last_rating$email, "decision", "total_score","diversity", "experience")
-fields <- c("decision", "total_score","diversity", "experience")
+ fields <- c("decision", "total_score","diversity", "experience")
 
 saveData <- function(data) {
   data <- t(data)
-  fileName <- paste(last_rating$name1,last_rating$name2,".csv")
-  write.csv(data, filePath, row.names = FALSE, quote = TRUE)
+  fileName <- paste0(last_rating$name1,last_rating$name2,".csv")
+  write.csv(data, row.names = FALSE, quote = TRUE)
 
 }
 
-
-
+# need to update this so it reads from the dataframe
+Rex <- c("I have used R for coursework", "I have used R for personal projects", "I have used R for work in government")
+#relevant
+Rex2 <- c("Used git to collaborate with others", "Made an open-source contribution to an existing project on GitHub")
 
 ##Shiny App
 shinyApp(
   ui = fluidPage(
-    
+    tags$style(type = "text/css", ".irs-grid-pol.small {height: 0px;}"),
     titlePanel(title=div(img(src='logo.png', align = "left", height = "40px", hspace = "10px"),
                          "Chicago R Unconference Reviews")),
     br(), br(),
     sidebarPanel(
+      h3("Applicant: 123"),
       h3(textOutput("total_score")),br(),
       sliderInput("reach", "Reach:",
                   min = 0, max = 5,
                   value = 0),
       sliderInput("diversity", "Diversity:",
-                  min = 0, max = 5,
+                  min = 0, max = 5, 
                   value = 0),
       sliderInput("experience", "Experience:",
-                  min = 0, max = 5,
+                  min = 0, max = 5, 
                   value = 0),
-      radioButtons("decision", "Decision", choices = c("Yes","No")),
+      radioButtons("decision", "Decision", choices = c("Yes","Maybe","No")),
       actionButton("submit", "Submit")
     ),
     
@@ -92,13 +99,13 @@ shinyApp(
                                      "Release an R package publicly",
                                      "Written unit tests for an R package",
                                      "Taught or helped others to do any or all of the above",
-                                     "Other"), selected = last_rating$experience),
+                                     "Other"), selected = Rex2),
       checkboxGroupInput("relevant", "R usage:", 
                          choices = c("I have used R for coursework", "I have used R for academic research (including theses)",
                                      "I have used R for personal projects", "I have used R for work in industry",
                                      "I have used R for work in government", "I have used R for work in a nonprofit",
-                                     "Other"), selected = last_rating$relevant),
-      h4(paste("Accomplishments: ",last_rating$accomplishments)),
+                                     "Other"), selected = Rex),
+      h4(paste("Accomplishments: ",Rex)),
       br(),br(),
       dataTableOutput('table')
     )
